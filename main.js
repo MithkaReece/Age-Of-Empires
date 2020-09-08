@@ -6,6 +6,8 @@ let selectedPos;
 let unitImgs = ['VillagerBlue','VillagerRed',"MilitaBlue","MilitaRed"];
 let onTerrainImgs = ['Gold',"Wheat"]
 let terrain = ["Plains"]
+
+let currentMenu = null;
 function preload(){
   for(let i=0;i<unitImgs.length;i++){
     let unit = unitImgs[i];
@@ -43,6 +45,11 @@ function draw(){
   pop();
   ellipseMode(CENTER);
   ellipse(width/2,height/2,5,5)
+
+  if(currentMenu!=null){
+    currentMenu.show();
+  }
+
   controls();
 }
 
@@ -52,11 +59,20 @@ function gotoTile(x,y){
 }
 
 function mouseClicked(){
-  let pos = createVector((mouseX-0.5*width+(cam.x+tile.x)*2),(mouseY-0.5*height+cam.y+tile.y))
-  let a = sqrt(2)*(0.5*pos.y+0.25*pos.x)/zoom;
-  let b = sqrt(2)*(0.5*pos.y-0.25*pos.x)/zoom;
-  selectedPos = createVector(round(a),round(b));
-  game.select(selectedPos);
+  if(currentMenu==null){
+    let pos = createVector((mouseX-0.5*width+(cam.x+tile.x)*2),(mouseY-0.5*height+cam.y+tile.y))
+    game.select(createVector(round(sqrt(2)*(0.5*pos.y+0.25*pos.x)/zoom),round(sqrt(2)*(0.5*pos.y-0.25*pos.x)/zoom)));
+  }else{
+    let result = currentMenu.click(mouseX,mouseY);
+    if(result=="Undo Move"){
+      if(currentMenu instanceof miniMenu){
+        game.undoMove();
+      }
+      currentMenu=null;
+    }else if(result=="Done"){
+      currentMenu=null;
+    }
+  }
 }
 
 function mouseWheel(event){
@@ -86,7 +102,6 @@ const clone = (items) => items.map(item => Array.isArray(item) ? clone(item) : i
 
 
 class Game{
-
   constructor(mapSize,terrain,buildings,units,teams){
     this.mapSize = mapSize;
     if(terrain==null){
@@ -108,19 +123,26 @@ class Game{
 
     this.selected=null;
     this.undoPos=null;
-
+    this.movingUnitPos=null;
     this.movementMap=null
   }
 
   randomTerrain(mapSize){
-    let tileTypes = ["Plains","Forest","Ocean","River","Hills","Mountains","Ford","Swamp","Bridge"];
+    let tileTypes = [new Plains,new Forest,new Ocean,new River,new Hills,new Mountains,new Ford,new Swamp,new Bridge,new Desert];
     let map = make2Darray(mapSize.x,mapSize.y);
     for(let y=0;y<mapSize.y;y++){
       for(let x=0;x<mapSize.x;x++){
-        map[x][y] = [tileTypes[floor(random(tileTypes.length))],];
+        map[x][y] = tileTypes[floor(random(tileTypes.length))];
       }
     }
     return map;
+  }
+
+  undoMove(){
+    let unit = this.units[this.movingUnitPos.x][this.movingUnitPos.y];
+    this.units[this.movingUnitPos.x][this.movingUnitPos.y]=null;
+    this.units[this.undoPos.x][this.undoPos.y] = unit;
+    this.select(this.undoPos);
   }
 
   select(pos){
@@ -136,13 +158,15 @@ class Game{
     let unitMoved = false;
     if(this.selected!=null){//Move unit if one is selected
       let unit = this.units[this.selected.x][this.selected.y]
-      let map = this.getMovementMap(this.selected,unit.getMovement());//Possible move tos
-      if(map[pos.x][pos.y]){
+      let map = this.getMovementMap(this.selected,unit.getTeam(),unit.getMovement());
+      if(map[pos.x][pos.y]){//If valid move
         unitMoved = true;
         this.undoPos=this.selected.copy();//Saves last position
-        this.units[pos.x][pos.y]=unit;//Move unit
+        this.movingUnitPos=pos.copy();
         this.units[this.selected.x][this.selected.y]=null;//Make last pos empty
-      }
+        this.units[pos.x][pos.y]=unit;//Move unit
+        currentMenu = new miniMenu(createVector(width/2,height/2),this.getOptions(pos));
+      } 
       unit.deselect();//Unselect unit
       this.movementMap=null;
       this.selected=null;
@@ -152,17 +176,17 @@ class Game{
       if(this.units[pos.x][pos.y]!=null){//If unit selected
         this.units[pos.x][pos.y].select();
         this.selected = pos;
-        this.movementMap = this.getMovementMap(this.selected,this.units[pos.x][pos.y].getMovement());
+        this.movementMap = this.getMovementMap(this.selected,this.units[pos.x][pos.y].getTeam(),this.units[pos.x][pos.y].getMovement());
       }
     }
   }
 
 
-  getMovementMap(pos,movesLeft){
+  getMovementMap(pos,team,movesLeft){
     let map = clone(this.terrain);
-    map[pos.x][pos.y]=false;
-    this.threeDirection(map,pos,createVector(1,0),movesLeft);
-    this.threeDirection(map,pos,createVector(-1,0),movesLeft);
+    map[pos.x][pos.y]=true;
+    this.threeDirection(map,pos,createVector(1,0),team,movesLeft);
+    this.threeDirection(map,pos,createVector(-1,0),team,movesLeft);
 
     for(let y=0;y<map.length;y++){
       for(let x=0;x<map.length;x++){
@@ -174,102 +198,54 @@ class Game{
     return map;
   }
 
-  threeDirection(map,pos,dir,movesLeft){
+  threeDirection(map,pos,dir,team,movesLeft){
     let forward = p5.Vector.add(pos,dir);
-    this.validMovement(map,forward,dir.copy(),movesLeft);
+    this.validMovement(map,forward,dir.copy(),team,movesLeft);
     let right = p5.Vector.add(pos,dir.copy().rotate(radians(90)));
-    this.validMovement(map,right,dir,movesLeft);
+    this.validMovement(map,right,dir,team,movesLeft);
     let left = p5.Vector.add(pos,dir.copy().rotate(radians(-90)));
-    this.validMovement(map,left,dir,movesLeft);
+    this.validMovement(map,left,dir,team,movesLeft);
   }
 
-  validMovement(map,pos,dir,movesLeft){
+  validMovement(map,pos,dir,team,movesLeft){
     pos.x=round(pos.x);
     pos.y=round(pos.y);
     if(pos.x>=0&&pos.x<this.mapSize.x&&pos.y>=0&&pos.y<this.mapSize.y){
       let terrain = map[pos.x][pos.y];
       if(terrain==false||terrain==true){return;}//If terrain has already been looked at
-      let movement = this.terrainToMoves(terrain[0]);
-      if(movement>0 && movesLeft-movement>=0){//If first position is valid <= add unit/building blocking
-        map[pos.x][pos.y]=true;
-        this.threeDirection(map,pos,dir,movesLeft-movement);
-        return;
-      }
-      if(movement==0){
+      let movement = terrain.getMovement();
+      if(movement==0||this.units[pos.x][pos.y]!=null){//If water or unit
         map[pos.x][pos.y]=false;
+        return;
+      }else if(this.buildings[pos.x][pos.y]!=null){//If building
+        if(this.buildings[pos.x][pos.y].getTeam()!=team){//If not on team
+          map[pos.x][pos.y]=false;
+          return
+        }
+      }
+      if(movesLeft-movement>=0){//If first position is valid <= add unit/building blocking
+        map[pos.x][pos.y]=true;
+        this.threeDirection(map,pos,dir,team,movesLeft-movement);
       }
     }
   }
 
-  terrainToMoves(terrain){
-    switch(terrain){
-      case "Ocean":
-        return 0;
-      case "River":
-        return 0;
-      case "Road":
-        return 1;
-      case "Bridge":
-        return 2;
-      case "Plains":
-        return 2;
-      case "Hills":
-        return 3;
-      case "Forest":
-        return 3;
-      case "Swamp":
-        return 3;
-      case "Ford":
-        return 3;
-      case "Mountains":
-        return 4;
+  getOptions(pos){
+    let unit = this.units[pos.x][pos.y];
+    let range = unit.getRange();
+    let options = [];
+
+    if(unit.getType()=="Villager"&&this.terrain[pos.x][pos.y].getBuilding().length>0){
+      options.push("Build");
     }
+    return options.concat(["Undo Move","Done"])
   }
 
 
   draw(width,height){
     for(let y=0;y<this.mapSize.y;y++){
       for(let x=0;x<this.mapSize.x;x++){
-        switch(this.terrain[x][y][0]){
-          case "Plains":
-            fill(0,255,0);
-            noSmooth();
-            strokeWeight(0)
-            image(terrain.filter(x=>x[0]=="Plains")[0][1],x*zoom,y*zoom,zoom+0.2,zoom+0.2)
-            break;
-          case "Forest":
-            fill(0,255,100);
-            break;
-          case "Ocean":
-            fill(0,100,255);
-            break;
-          case "River":
-            fill(0,0,255);
-            break;
-          case "Hills":
-            fill(0,200,0);
-            break;
-          case "Mountains":
-            fill(200,200,200);
-            break;
-          case "Ford":
-            fill(130,130,130);
-            break;
-          case "Swamp":
-            fill(40,50,200)
-            break;
-          case "Bridge":
-            fill(100,250,200)
-            break;   
-          default:
-            fill(255,0,0)
-          break;
-        }
-        stroke(0)
-        strokeWeight(1)
-        rectMode(CORNER);
-        rect(x*zoom,y*zoom,zoom,zoom);
-
+        this.terrain[x][y].show(x,y,zoom);
       }
     }
 
@@ -295,7 +271,7 @@ class Game{
             translate((x+0.25)*zoom,(y+0.25)*zoom)
             rotate(radians(-45))
             scale(1,1.6)
-            
+            /*
         switch(this.terrain[x][y][1]){
           case "Wheat":
             image(onTerrainImgs.filter(x=>x[0]=="Wheat")[0][1],0,0,zoom,zoom)
@@ -306,6 +282,7 @@ class Game{
             fill(255,255,0);
           break;
         }
+        */
         pop();
 
         
@@ -364,13 +341,19 @@ class Infantry{
     this.img=unitImgs.filter(x=>x[0]==this.type+colour)[0][1];
     this.selected = false;
     this.movement = 7;
+    this.range = 1;
   }
-
+  getType(){
+    return this.type;
+  }
   getTeam(){
     return this.team;
   }
   getMovement(){
-    return this.movement
+    return this.movement;
+  }
+  getRange(){
+    return this.range;
   }
 
   select(){
