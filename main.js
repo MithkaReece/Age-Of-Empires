@@ -62,15 +62,19 @@ function mouseClicked(){
   if(currentMenu==null){
     let pos = createVector((mouseX-0.5*width+(cam.x+tile.x)*2),(mouseY-0.5*height+cam.y+tile.y))
     game.select(createVector(round(sqrt(2)*(0.5*pos.y+0.25*pos.x)/zoom),round(sqrt(2)*(0.5*pos.y-0.25*pos.x)/zoom)));
-  }else{
+  }else{//In menu
     let result = currentMenu.click(mouseX,mouseY);
     if(result=="Undo Move"){
-      if(currentMenu instanceof miniMenu){
+      if(currentMenu instanceof miniMenu){//Might not be needed later
         game.undoMove();
       }
       currentMenu=null;
     }else if(result=="Done"){
       currentMenu=null;
+    }else if(result=="Build"){
+      currentMenu=new miniMenu(game.getBuildings().concat("Cancel"));
+    }else if(result=="Cancel"){
+      game.openUnitMenu();
     }
   }
 }
@@ -102,12 +106,17 @@ const clone = (items) => items.map(item => Array.isArray(item) ? clone(item) : i
 
 
 class Game{
-  constructor(mapSize,terrain,buildings,units,teams){
+  constructor(mapSize,terrain,resources,buildings,units,teams){
     this.mapSize = mapSize;
     if(terrain==null){
       this.terrain = this.randomTerrain(mapSize);
     }else{
       this.terrain = terrain;
+    }
+    if(resources==null){
+      this.resources = randomResources(mapSize.x,mapSize.y,this.terrain);
+    }else{
+      this.resources = resources;
     }
     if(buildings==null){
       this.buildings = make2Darray(mapSize.x,mapSize.y);
@@ -122,8 +131,8 @@ class Game{
     this.teams = teams;
 
     this.selected=null;
-    this.undoPos=null;
-    this.movingUnitPos=null;
+    this.lastPos=null;
+    this.movingPos=null;
     this.movementMap=null
   }
 
@@ -139,10 +148,14 @@ class Game{
   }
 
   undoMove(){
-    let unit = this.units[this.movingUnitPos.x][this.movingUnitPos.y];
-    this.units[this.movingUnitPos.x][this.movingUnitPos.y]=null;
-    this.units[this.undoPos.x][this.undoPos.y] = unit;
-    this.select(this.undoPos);
+    let unit = this.units[this.movingPos.x][this.movingPos.y];
+    this.units[this.movingPos.x][this.movingPos.y]=null;
+    this.units[this.lastPos.x][this.lastPos.y] = unit;
+    this.select(this.lastPos);
+  }
+
+  openUnitMenu(){
+    currentMenu = new miniMenu(this.getOptions(this.movingPos));
   }
 
   select(pos){
@@ -161,11 +174,11 @@ class Game{
       let map = this.getMovementMap(this.selected,unit.getTeam(),unit.getMovement());
       if(map[pos.x][pos.y]){//If valid move
         unitMoved = true;
-        this.undoPos=this.selected.copy();//Saves last position
-        this.movingUnitPos=pos.copy();
+        this.lastPos=this.selected.copy();//Saves last position
+        this.movingPos=pos.copy();
         this.units[this.selected.x][this.selected.y]=null;//Make last pos empty
         this.units[pos.x][pos.y]=unit;//Move unit
-        currentMenu = new miniMenu(createVector(width/2,height/2),this.getOptions(pos));
+        this.openUnitMenu();
       } 
       unit.deselect();//Unselect unit
       this.movementMap=null;
@@ -180,7 +193,6 @@ class Game{
       }
     }
   }
-
 
   getMovementMap(pos,team,movesLeft){
     let map = clone(this.terrain);
@@ -197,7 +209,6 @@ class Game{
     }
     return map;
   }
-
   threeDirection(map,pos,dir,team,movesLeft){
     let forward = p5.Vector.add(pos,dir);
     this.validMovement(map,forward,dir.copy(),team,movesLeft);
@@ -206,7 +217,6 @@ class Game{
     let left = p5.Vector.add(pos,dir.copy().rotate(radians(-90)));
     this.validMovement(map,left,dir,team,movesLeft);
   }
-
   validMovement(map,pos,dir,team,movesLeft){
     pos.x=round(pos.x);
     pos.y=round(pos.y);
@@ -241,6 +251,9 @@ class Game{
     return options.concat(["Undo Move","Done"])
   }
 
+  getBuildings(){
+    return [];
+  }
 
   draw(width,height){
     for(let y=0;y<this.mapSize.y;y++){
@@ -265,24 +278,25 @@ class Game{
           }
         }
 
-        noSmooth()
+       
         push();
-            imageMode(CENTER)
-            translate((x+0.25)*zoom,(y+0.25)*zoom)
-            rotate(radians(-45))
-            scale(1,1.6)
-            /*
-        switch(this.terrain[x][y][1]){
-          case "Wheat":
-            image(onTerrainImgs.filter(x=>x[0]=="Wheat")[0][1],0,0,zoom,zoom)
-          break;
-          case "Gold":
-            let img = onTerrainImgs.filter(x=>x[0]=="Gold")[0][1]
-            image(img,0,0,zoom,zoom)
-            fill(255,255,0);
-          break;
+        noSmooth()
+        imageMode(CENTER)
+        translate((x+0.25)*zoom,(y+0.25)*zoom)
+        rotate(radians(-45))
+        scale(1,1.6)
+        if(this.buildings[x][y]==null){
+          switch(this.resources[x][y]){
+            case "Wheat":
+              image(onTerrainImgs.filter(x=>x[0]=="Wheat")[0][1],0,0,zoom,zoom)
+            break;
+            case "Gold":
+              let img = onTerrainImgs.filter(x=>x[0]=="Gold")[0][1]
+              image(img,0,0,zoom,zoom)
+              fill(255,255,0);
+            break;
+          }
         }
-        */
         pop();
 
         
@@ -302,14 +316,36 @@ class Game{
 class preMade extends Game{
   constructor(preload){
     if(preload == 1){
-      super(createVector(15,15),null,null,plainUnits(15,15),2);
+      super(createVector(15,15),null,null,null,plainUnits(15,15),2);
     }
   
   }
 
 }
 
-
+function randomResources(length,height,terrain){
+  let map = make2Darray(length,height);
+  let wheat = 5;
+  let gold = 2;
+  for(let y=0;y<height;y++){
+    for(let x=0;x<length;x++){
+      let c = terrain[x][y];
+      if(wheat>0){
+        if(c instanceof Plains){
+          map[x][y] = "Wheat";
+          wheat--;
+        }
+      }
+      if(gold>0){
+        if(c instanceof Hills || c instanceof Mountains){
+          map[x][y] = "Gold"
+          gold--;
+        }
+      }
+    }
+  }
+  return map;
+}
 function plainTerrain(length,height){
   let map = make2Darray(length,height);
   for(let y=0;y<height;y++){

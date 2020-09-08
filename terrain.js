@@ -25,7 +25,7 @@ class Ocean extends Terrain{
     constructor(){
         super([0,100,255])
         this.movement = 0;
-        this.building = null;
+        this.building = [];
     }
 }
 
@@ -33,7 +33,7 @@ class River extends Terrain{
     constructor(){
         super([0,0,255])
         this.movement = 0;
-        this.building = null;
+        this.building = [];
     }
 }
 
@@ -41,7 +41,7 @@ class Bridge extends Terrain{
     constructor(){
         super([100,250,200])
         this.movement = 2;
-        this.building = null;
+        this.building = [];
     }
 }
 
@@ -51,6 +51,8 @@ class Plains extends Terrain{
         this.movement = 2;
         this.building = ["towns","castles","farm"];
     }
+
+    
 }
 
 class Desert extends Terrain{
@@ -81,7 +83,7 @@ class Swamp extends Terrain{
     constructor(){
         super([40,50,200])
         this.movement = 3;
-        this.building = null;
+        this.building = [];
     }
 }
 
@@ -89,7 +91,7 @@ class Ford extends Terrain{
     constructor(){
         super([130,130,130])
         this.movement = 3;
-        this.building = null;
+        this.building = [];
     }
 }
 

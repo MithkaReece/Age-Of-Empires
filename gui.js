@@ -1,23 +1,33 @@
 class miniMenu{
-    constructor(pos,options){
-        this.pos = pos;
+    constructor(options){
+        this.pos = createVector(width/2,height/2);
         this.width = 110;
         this.height = 20;
         this.innerBorder = 3;
         this.outerBorder = 10;
         this.options = options;
         this.selectedIndex = 0;
+        this.previousOptions=null;
     }
 
     click(x,y){
         if(this.onMenu(x,y)){
             for(let i=0;i<this.options.length;i++){
                 if(this.region(x,y,this.pos.x,this.pos.y+this.height*i,this.width,this.height)){
+                    let result = this.options[i];
+                    if(result=="Build"){
+                        
+                    }
                     return this.options[i];
                 }
             }
         }else{
-            return "Undo Move";
+            if(this.options.includes("Undo Move")){
+                return "Undo Move";
+            }else{
+                return "Cancel";
+            }
+            
         }
     }
 
