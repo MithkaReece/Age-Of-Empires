@@ -9,7 +9,13 @@ class miniMenu{
         this.selectedIndex = 0;
         this.previousOptions=null;
         this.toText = {
-            "Town Center":TownCenter 
+            "Town Center":TownCenter,
+            "Mill":Mill,
+            "Farm":Farm,
+            "Mine":Mine,
+            "Barracks":Barracks,
+            "Stables":Stables,
+            "ArcheryRange":ArcheryRange
         }
     }
 
@@ -29,11 +35,15 @@ class miniMenu{
                             currentMenu=null;
                             break;
                         case "Build":
-                            currentMenu=new miniMenu(game.getBuildings().concat("Cancel"));
+                            currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getResources()).concat("Cancel"));
+                            break;
+                        case "Cancel":
+                            game.openUnitMenu();
                             break;
                     }
-                    if(Object.values(this.toText).includes(result)){
-                        game.built(result);
+                    if(Object.keys(this.toText).includes(result)){
+                        game.build(this.toText[result]);
+                        game.lock()
                         currentMenu=null;
                     }
                     return this.options[i];
@@ -105,23 +115,10 @@ class sideBar{
                         case "MainMenu":
 
                         case "NextUnit":
-                            let units = game.getCurrentTeam().getUnits().filter(x=>x.getLocked()==false);
-                            if(units.length==0){break}
-                            let unit = null;
-                            if(game.onMap(selectedPos)){
-                                unit = game.getUnits()[selectedPos.x][selectedPos.y]
+                            let result = this.getNextUnit();
+                            if(result!=null){
+                                game.select(result);
                             }
-                            let index = 0;
-                            if(unit!=null){//If unit selected
-                                if(unit.getTeam()==game.getTurn()){//If unit selected is on team
-                                    for(let i=0;i<units.length;i++){//Find selected unit
-                                        if(units[i]===unit){
-                                            index = (i+1)%units.length;
-                                        }
-                                    }
-                                }
-                            }
-                            game.select(units[index].getPos());
                             break;
                         case "TileSwitch":
 
@@ -136,6 +133,26 @@ class sideBar{
             return false;
         }
         return true;
+    }
+
+    getNextUnit(){
+        let units = game.getCurrentTeam().getUnits().filter(x=>x.getLocked()==false);
+        if(units.length==0){return null}
+        let unit = null;
+        if(game.onMap(selectedPos)){
+            unit = game.getUnits()[selectedPos.x][selectedPos.y]
+        }
+        let index = 0;
+        if(unit!=null){//If unit selected
+            if(unit.getTeam()==game.getTurn()){//If unit selected is on team
+                for(let i=0;i<units.length;i++){//Find selected unit
+                    if(units[i]===unit){
+                        index = (i+1)%units.length;
+                    }
+                }
+            }
+        }
+        return units[index].getPos();
     }
 
     region(a,b,x,y,w,h){

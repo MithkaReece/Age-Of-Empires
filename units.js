@@ -9,6 +9,9 @@ class Unit{
     getPos(){
         return this.pos;
     }
+    setPos(pos){
+        this.pos = pos.copy();
+    }
     getTeam(){
         return this.team;
     }

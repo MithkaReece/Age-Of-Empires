@@ -1,11 +1,12 @@
 let game;
-let zoom = 20;
+let zoom = 30;
 let cam;
 let tile;
 let selectedPos;
 let unitImgs = ['VillagerBlue','VillagerRed',"MilitaBlue","MilitaRed"];
 let onTerrainImgs = ['Gold',"Wheat"]
-let terrain = ["Plains"]
+let terrainImgs = ["Plains"]
+let buildingImgs = ["TownCenterBlue","TownCenterRed","MillBlue","MillRed"];
 
 let currentMenu = null;
 let sidebar;
@@ -20,15 +21,20 @@ function preload(){
     let img = loadImage('OnTerrain/'+onTerrain+'.png');
     onTerrainImgs[i] = [onTerrain,img];
   }
-  for(let i=0;i<terrain.length;i++){
-    let cterrain = terrain[i];
-    let img = loadImage('terrain/'+cterrain+'.png');
-    terrain[i] = [cterrain,img];
+  for(let i=0;i<terrainImgs.length;i++){
+    let terrain = terrainImgs[i];
+    let img = loadImage('terrain/'+terrain+'.png');
+    terrainImgs[i] = [terrain,img];
+  }
+  for(let i=0;i<buildingImgs.length;i++){
+    let building = buildingImgs[i];
+    let img = loadImage('buildings/'+building+'.png');
+    buildingImgs[i] = [building,img];
   }
 }
 
 function setup() {
-  createCanvas(800, 400);
+  createCanvas(1400, 800);
   sidebar = new sideBar(width,height);
   selectedPos = createVector(-1,-1)
   tile = createVector(0,0);

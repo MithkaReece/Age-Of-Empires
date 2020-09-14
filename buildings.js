@@ -10,8 +10,10 @@ class Building{
         return this.team;
     }
     finish(){
-        this.built = true;
-        this.health+=50;
+        if(this.built==false){
+            this.built = true;
+            this.health+=50;
+        }
     }
     getBuilt(){
         return this.built;
@@ -25,51 +27,65 @@ class Building{
     }
 
     
-    show(){
+    show(x,y){
         push();
         noSmooth()
         imageMode(CENTER)
         rectMode(CENTER)
         translate((x+0.25)*zoom,(y+0.25)*zoom)
         rotate(radians(-45))
-        scale(1,1.6)
+        scale(1,2)
+        stroke(0);
         if(this.built){
-            fill(img);
+            image(this.img,0,0,zoom,zoom)
         }else{
-            fill(10);
+            image(this.img,0,0,zoom,zoom)
+            //fill(this.img);
         }
-        rect(0,0,zoom,zoom)
         pop();
     }
 }
 
 class TownCenter extends Building{
-    constructor(team){
-        super(team);
+    constructor(team,colour,img){
+        super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenter"+colour)[0][1];
     }
 }
 
 class Barracks extends Building{
-    constructor(team){
-        super(team);
+    constructor(team,img){
+        super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
 }
 
 class Stables extends Building{
-    constructor(team){
-        super(team);
+    constructor(team,img){
+        super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
 }
 
 class ArcheryRange extends Building{
-    constructor(team){
-        super(team);
+    constructor(team,img){
+        super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
 }
 
 class Mill extends Building{
+    constructor(team,colour,img){
+        super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="Mill"+colour)[0][1];
+    }
+
+}
+
+class Farm extends Building{
     constructor(team,img){
         super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
 
 }
@@ -77,8 +93,9 @@ class Mill extends Building{
 class Mine extends Building{
     constructor(team,img){
         super(team,img);
-        
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
 
 
 }
+

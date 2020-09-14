@@ -1,7 +1,8 @@
 class Team{
-    constructor(units,buildings){
+    constructor(units,buildings,colour){
         this.units = units;
         this.buildings = buildings;
+        this.colour = colour;
     }
 
     getUnits(){
@@ -9,6 +10,9 @@ class Team{
     }
     getBuildings(){
         return this.buildings;
+    }
+    getColour(){
+        return this.colour;
     }
 
     unlockAll(){
