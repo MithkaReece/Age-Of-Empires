@@ -8,24 +8,43 @@ class miniMenu{
         this.options = options;
         this.selectedIndex = 0;
         this.previousOptions=null;
+        this.toText = {
+            "Town Center":TownCenter 
+        }
     }
 
+
     click(x,y){
-        if(this.onMenu(x,y)){
+        if(this.onMenu(x,y)){//If clicked on menu
             for(let i=0;i<this.options.length;i++){
                 if(this.region(x,y,this.pos.x,this.pos.y+this.height*i,this.width,this.height)){
                     let result = this.options[i];
-                    if(result=="Build"){
-                        
+                    switch(result){
+                        case "Done":
+                            game.lock();
+                            currentMenu=null;
+                            break;
+                        case "Undo Move":
+                            game.undoMove();
+                            currentMenu=null;
+                            break;
+                        case "Build":
+                            currentMenu=new miniMenu(game.getBuildings().concat("Cancel"));
+                            break;
+                    }
+                    if(Object.values(this.toText).includes(result)){
+                        game.built(result);
+                        currentMenu=null;
                     }
                     return this.options[i];
                 }
             }
         }else{
             if(this.options.includes("Undo Move")){
-                return "Undo Move";
+                game.undoMove();
+                currentMenu=null;
             }else{
-                return "Cancel";
+                game.openUnitMenu();
             }
             
         }
@@ -58,4 +77,84 @@ class miniMenu{
         pop();
     }
 
+}
+
+class sideBar{
+    constructor(width,height){
+        this.width = 80
+        this.height = height;
+        this.pos = createVector(width-this.width,0)
+        this.options = ["Info","MainMenu","NextUnit","TileSwitch","End Day"]
+        this.topGap = 10;
+        this.bottomGap = 10;
+        this.leftGap = 10;
+        this.rightGap = 10;
+        this.betweenGap = 10;
+    }
+
+    click(x,y){
+        if(this.region(x,y,this.pos.x,this.pos.y,this.width,this.height)){
+            for(let i=0;i<this.options.length;i++){
+                let h = (this.height-this.topGap-this.bottomGap-(this.options.length-1)*this.betweenGap)/this.options.length;
+                let calcY = this.topGap+i*(h+this.betweenGap)
+                if(this.region(x,y,this.pos.x,calcY,this.width,h)){
+                    let result = this.options[i];
+                    switch(result){
+                        case "Info":
+                        
+                        case "MainMenu":
+
+                        case "NextUnit":
+                            let units = game.getCurrentTeam().getUnits().filter(x=>x.getLocked()==false);
+                            if(units.length==0){break}
+                            let unit = null;
+                            if(game.onMap(selectedPos)){
+                                unit = game.getUnits()[selectedPos.x][selectedPos.y]
+                            }
+                            let index = 0;
+                            if(unit!=null){//If unit selected
+                                if(unit.getTeam()==game.getTurn()){//If unit selected is on team
+                                    for(let i=0;i<units.length;i++){//Find selected unit
+                                        if(units[i]===unit){
+                                            index = (i+1)%units.length;
+                                        }
+                                    }
+                                }
+                            }
+                            game.select(units[index].getPos());
+                            break;
+                        case "TileSwitch":
+
+                        case "End Day":
+                            game.endDay();
+                        break;
+                    }
+                }
+                
+            }
+        }else{
+            return false;
+        }
+        return true;
+    }
+
+    region(a,b,x,y,w,h){
+        return a>=x && a<=x+w && b>=y && b<=y+h;
+    }
+
+    show(){
+        push();
+        translate(this.pos.x,0)
+        fill(222,184,13);
+        rect(0,0,this.width,height);
+        for(let i=0;i<this.options.length;i++){
+            let w = this.width-this.leftGap-this.rightGap;
+            let x = this.leftGap;
+            let h = (this.height-this.topGap-this.bottomGap-(this.options.length-1)*this.betweenGap)/this.options.length;
+            let y = this.topGap+i*(h+this.betweenGap);
+            fill(255,0,0);
+            rect(x,y,w,h);
+        }
+        pop();
+    }
 }

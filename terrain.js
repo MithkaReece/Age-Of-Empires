@@ -7,8 +7,8 @@ class Terrain{
         return this.movement
     }
 
-    getBuilding(){
-        return this.building;
+    getBuildings(){
+        return this.buildings;
     }
 
     show(x,y,scale){
@@ -25,7 +25,7 @@ class Ocean extends Terrain{
     constructor(){
         super([0,100,255])
         this.movement = 0;
-        this.building = [];
+        this.buildings = [];
     }
 }
 
@@ -33,7 +33,7 @@ class River extends Terrain{
     constructor(){
         super([0,0,255])
         this.movement = 0;
-        this.building = [];
+        this.buildings = [];
     }
 }
 
@@ -41,7 +41,7 @@ class Bridge extends Terrain{
     constructor(){
         super([100,250,200])
         this.movement = 2;
-        this.building = [];
+        this.buildings = [];
     }
 }
 
@@ -49,7 +49,7 @@ class Plains extends Terrain{
     constructor(){
         super([0,255,0])
         this.movement = 2;
-        this.building = ["towns","castles","farm"];
+        this.buildings = ["towns","castles","farm"];
     }
 
     
@@ -59,7 +59,7 @@ class Desert extends Terrain{
     constructor(){
         super([255,255,0])
         this.movement = 2;
-        this.building = ["towns","castles"];
+        this.buildings = ["towns","castles"];
     }
 }
 
@@ -67,7 +67,7 @@ class Hills extends Terrain{
     constructor(){
         super([0,200,0])
         this.movement = 3;
-        this.building = ["towns","castles"];
+        this.buildings = ["towns","castles"];
     }
 }
 
@@ -75,7 +75,7 @@ class Forest extends Terrain{
     constructor(){
         super([0,255,100])
         this.movement = 3;
-        this.building = ["towns","castles"];
+        this.buildings = ["towns","castles"];
     }
 }
 
@@ -83,7 +83,7 @@ class Swamp extends Terrain{
     constructor(){
         super([40,50,200])
         this.movement = 3;
-        this.building = [];
+        this.buildings = [];
     }
 }
 
@@ -91,7 +91,7 @@ class Ford extends Terrain{
     constructor(){
         super([130,130,130])
         this.movement = 3;
-        this.building = [];
+        this.buildings = [];
     }
 }
 
@@ -99,7 +99,7 @@ class Mountains extends Terrain{
     constructor(){
         super([200,200,200])
         this.movement = 4;
-        this.building = ["castles"]
+        this.buildings = ["castles"]
     }
 }
 
