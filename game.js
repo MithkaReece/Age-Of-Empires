@@ -172,7 +172,7 @@ class Game{
             rect(x*zoom,y*zoom,zoom,zoom);
           }
           if(this.movementMap!=null){
-            if(this.movementMap[x][y]==true){
+            if(this.movementMap[x][y]!=null){
               strokeWeight(0)
               fill(255,255,0,180);
               rect(x*zoom,y*zoom,zoom,zoom)
@@ -281,46 +281,46 @@ class Game{
   //Gets movement maps, gets build map, search areas
   class searcher{
     static getMovementMap(pos,team,movesLeft){
+      let terrain = game.getTerrain();
       let map = clone(game.getTerrain());
       map[pos.x][pos.y]=true;
-      searcher.threeDirection(map,pos,createVector(1,0),team,movesLeft);
-      searcher.threeDirection(map,pos,createVector(-1,0),team,movesLeft);
+      searcher.threeDirection(map,terrain,pos,createVector(1,0),team,movesLeft);
+      searcher.threeDirection(map,terrain,pos,createVector(-1,0),team,movesLeft);
       for(let y=0;y<map.length;y++){
         for(let x=0;x<map[0].length;x++){
           if(map[x][y]!=true){
             map[x][y] = null;
+          }else if(!(pos.x==x&pos.y==y)&&game.getUnits()[x][y]!=null){//If other friendly unit
+            map[x][y] = false;//Stop player moving onto friendly unit
           }
         }
       }
       return map;
     }
-    static threeDirection(map,pos,dir,team,movesLeft){
+    static threeDirection(map,terrain,pos,dir,team,movesLeft){
       let forward = p5.Vector.add(pos,dir);
-      searcher.validMovement(map,forward,dir.copy(),team,movesLeft);
+      searcher.validMovement(map,terrain,forward,dir,team,movesLeft);
       let right = p5.Vector.add(pos,dir.copy().rotate(radians(90)));
-      searcher.validMovement(map,right,dir,team,movesLeft);
-      let left = p5.Vector.add(pos,dir.copy().rotate(radians(-90)));
-      searcher.validMovement(map,left,dir,team,movesLeft);
+      searcher.validMovement(map,terrain,right,dir,team,movesLeft);
+      let left = p5.Vector.add(pos,terrain,dir.copy().rotate(radians(-90)));
+      searcher.validMovement(map,terrain,left,dir,team,movesLeft);
     }
-    static validMovement(map,pos,dir,team,movesLeft){
+    static validMovement(map,terrain,pos,dir,team,movesLeft){
       pos.x=round(pos.x);
       pos.y=round(pos.y);
       if(game.onMap(pos)){
-        let terrain = map[pos.x][pos.y];
-        if(terrain==false||terrain==true){return;}//If terrain has already been looked at
-        let movement = terrain.getMovement();
-        if(movement==0||game.getUnits()[pos.x][pos.y]!=null){//If water or unit
-          map[pos.x][pos.y]=false;
-          return;
-        }else if(game.getBuildings()[pos.x][pos.y]!=null){//If building
-          if(game.getBuildings()[pos.x][pos.y].getTeam()!=team){//If not on team
-            map[pos.x][pos.y]=false;
-            return
-          }
+        let currentTerrain = terrain[pos.x][pos.y];
+        let movement = currentTerrain.getMovement();
+        if(movement==0){return};//If water
+        if(game.getUnits()[pos.x][pos.y]!=null){//If unit
+          if(game.getUnits()[pos.x][pos.y].getTeam()!=team){return}//If unit not on team
+        }
+        if(game.getBuildings()[pos.x][pos.y]!=null){//If building
+          if(game.getBuildings()[pos.x][pos.y].getTeam()!=team){return}//If not on team
         }
         if(movesLeft-movement>=0){//If first position is valid <= add unit/building blocking
           map[pos.x][pos.y]=true;
-          searcher.threeDirection(map,pos,dir,team,movesLeft-movement);
+          searcher.threeDirection(map,terrain,pos,dir,team,movesLeft-movement);
         }
       }
     }
