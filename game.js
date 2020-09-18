@@ -65,6 +65,9 @@ class Game{
     getMovingPos(){
       return this.movingPos;
     }
+    getMapSize(){
+      return this.mapSize;
+    }
     //One line functions
     openUnitMenu(){currentMenu = new miniMenu(this.getOptions(this.movingPos))}
     lock(){this.units[this.movingPos.x][this.movingPos.y].lock()}
@@ -89,7 +92,8 @@ class Game{
         }
         return true;
       }
-      selectedPos = pos;
+      this.moveCamToSelected(pos);
+      selectedPos=pos;
       let unitMoved = false;
       if(this.selected!=null){//Move unit if one is selected
         let unit = this.units[this.selected.x][this.selected.y]
@@ -122,6 +126,26 @@ class Game{
         }
       }
       return true;
+    }
+
+    moveCamToSelected(pos){
+      let difference = p5.Vector.sub(pos,selectedPos);
+      for(let i=0;i<max(abs(difference.x),abs(difference.y));i++){
+        if(i<abs(difference.x)){
+          selectedPos.add(createVector(difference.x/abs(difference.x),0));
+          if(selectedCamDist()>viewArea){
+            offset.add(createVector(difference.x/abs(difference.x),0));
+            gotoTile(offset.x,offset.y);
+          }
+        }
+        if(i<abs(difference.y)){
+          selectedPos.add(createVector(0,difference.y/abs(difference.y)));
+          if(selectedCamDist()>viewArea){
+            offset.add(createVector(0,difference.y/abs(difference.y)));
+            gotoTile(offset.x,offset.y);
+          }
+        }
+      }
     }
   
     getOptions(pos){
@@ -161,7 +185,7 @@ class Game{
         for(let x=0;x<this.mapSize.x;x++){
           this.terrain[x][y].show(x,y,zoom);
         }
-      }
+      }//Terrain
   
       for(let y=0;y<this.mapSize.y;y++){
         for(let x=0;x<this.mapSize.x;x++){
@@ -170,14 +194,14 @@ class Game{
             stroke(255);
             fill(0,0,0,0);
             rect(x*zoom,y*zoom,zoom,zoom);
-          }
+          }//White Selected
           if(this.movementMap!=null){
             if(this.movementMap[x][y]!=null){
               strokeWeight(0)
               fill(255,255,0,180);
               rect(x*zoom,y*zoom,zoom,zoom)
             }
-          }
+          }//movement map
           if(this.selected!=null){
             if(this.buildMap!=null&&this.units[this.selected.x][this.selected.y] instanceof Villager){
               if(this.buildMap[x][y]==true){
@@ -186,7 +210,7 @@ class Game{
                 rect(x*zoom,y*zoom,zoom,zoom)
               }
             }
-          }
+          }//Build map
          
           push();
           noSmooth()
