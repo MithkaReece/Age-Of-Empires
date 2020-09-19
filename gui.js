@@ -19,44 +19,69 @@ class miniMenu{
         }
     }
 
+    getSelectedIndex(){
+        return this.selectedIndex;
+    }
 
-    click(x,y){
-        if(this.onMenu(x,y)){//If clicked on menu
+    move(dir){
+        this.selectedIndex += dir;
+        if(this.selectedIndex<0){this.selectedIndex=0};
+        if(this.selectedIndex>=this.options.length){this.selectedIndex=this.options.length-1};
+    }
+
+    mouseOver(x,y){
+        if(this.onMenu(x,y)){
             for(let i=0;i<this.options.length;i++){
                 if(this.region(x,y,this.pos.x,this.pos.y+this.height*i,this.width,this.height)){
-                    let result = this.options[i];
-                    switch(result){
-                        case "Done":
-                            game.lock();
-                            currentMenu=null;
-                            break;
-                        case "Undo Move":
-                            game.undoMove();
-                            currentMenu=null;
-                            break;
-                        case "Build":
-                            currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getResources()).concat("Cancel"));
-                            break;
-                        case "Cancel":
-                            game.openUnitMenu();
-                            break;
-                    }
-                    if(Object.keys(this.toText).includes(result)){
-                        game.build(this.toText[result]);
-                        game.lock()
-                        currentMenu=null;
-                    }
-                    return this.options[i];
+                    this.selectedIndex = i;
                 }
             }
-        }else{
-            if(this.options.includes("Undo Move")){
+        }
+    }
+
+    mouseClick(x,y){
+        if(this.onMenu(x,y)){//If clicked on menu
+            this.clickOption(this.selectedIndex);
+        }else{//Clicked off menu
+            if(this.options.includes("Undo Move")){//Complete unselect
                 game.undoMove();
                 currentMenu=null;
-            }else{
+            }else{//Go back a menu
                 game.openUnitMenu();
             }
             
+        }
+    }
+
+    clickOption(i){
+        let result = this.options[i];
+        switch(result){
+            case "Done":
+                game.lock();
+                currentMenu=null;
+                break;
+            case "Undo Move":
+                game.undoMove();
+                currentMenu=null;
+                break;
+            case "Build":
+                currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat("Cancel"));
+                break;
+            case "Cancel":
+                game.openUnitMenu();
+                break;
+            case "Castle":
+                game.setCastleWonder(new Castle(game.getTurn(),game.getCurrentTeam().getColour(),[255,0,0],searcher.getCastleWonders("castles",game.getTerrain(),game.getBuildings(),game.getUnits(),game.getMovingPos())))
+                currentMenu=null;
+                break;
+            case "Wonder":
+
+                break;
+        }
+        if(Object.keys(this.toText).includes(result)){
+            game.build(this.toText[result]);
+            game.lock()
+            currentMenu=null;
         }
     }
 
@@ -83,6 +108,10 @@ class miniMenu{
             fill(0)
             textSize(this.height);
             text(this.options[i],0,this.height*(i+1));
+            if(i==this.selectedIndex){
+                fill(0,100);
+                rect(0,this.height*i,this.width,this.height);
+            }
         }
         pop();
     }

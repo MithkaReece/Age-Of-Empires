@@ -54,21 +54,21 @@ class TownCenter extends Building{
 }
 
 class Barracks extends Building{
-    constructor(team,img){
+    constructor(team,colour,img){
         super(team,img);
         this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
 }
 
 class Stables extends Building{
-    constructor(team,img){
+    constructor(team,colour,img){
         super(team,img);
         this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
 }
 
 class ArcheryRange extends Building{
-    constructor(team,img){
+    constructor(team,colour,img){
         super(team,img);
         this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
@@ -83,7 +83,7 @@ class Mill extends Building{
 }
 
 class Farm extends Building{
-    constructor(team,img){
+    constructor(team,colour,img){
         super(team,img);
         this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
@@ -91,7 +91,7 @@ class Farm extends Building{
 }
 
 class Mine extends Building{
-    constructor(team,img){
+    constructor(team,colour,img){
         super(team,img);
         this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
@@ -99,3 +99,50 @@ class Mine extends Building{
 
 }
 
+
+class Castle extends Building{
+    constructor(team,colour,img,locations){
+        super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+        this.locations = locations;
+        this.cornerIndex = 0;
+        this.nextAvailableCorner(1);
+        console.log(this.cornerIndex);
+    }   
+
+    getCurrentCorner(){
+        return this.locations[this.cornerIndex];
+    }
+
+    nextAvailableCorner(dir){
+        if(dir>0){
+            for(let i=1;i<this.locations.length;i++){
+                if(this.locations[(this.cornerIndex+i)%this.locations.length]!=null){
+                    this.cornerIndex=(this.cornerIndex+i)%this.locations.length
+                    return;
+                }
+            }
+        }else{
+            for(let i=1;i>-this.locations.length;i--){
+                if(this.locations[(this.cornerIndex+i+this.locations.length)%this.locations.length]!=null){
+                    this.cornerIndex=(this.cornerIndex+i+this.locations.length)%this.locations.length
+                    return;
+                }
+            }
+        }
+    }
+
+}
+
+class Wonder extends Building{
+    constructor(team,colour,img,locations){
+        super(team,img);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+        this.locations = locations;
+    }
+    getLocations(){
+        return this.locations;
+    }
+
+
+}

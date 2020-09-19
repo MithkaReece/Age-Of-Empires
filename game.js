@@ -42,6 +42,7 @@ class Game{
       this.movingPos=null;
       this.movementMap=null;//Positions you can move
       this.buildMap=null;//Positions you can move to and build off from something
+      this.castleWonder=null;
     }
     //Getters & Setters
     getTurn(){
@@ -68,6 +69,12 @@ class Game{
     getMapSize(){
       return this.mapSize;
     }
+    getCastleWonder(){
+      return this.castleWonder;
+    }
+    setCastleWonder(value){
+      this.castleWonder = value;
+    }
     //One line functions
     openUnitMenu(){currentMenu = new miniMenu(this.getOptions(this.movingPos))}
     lock(){this.units[this.movingPos.x][this.movingPos.y].lock()}
@@ -75,6 +82,10 @@ class Game{
     onMap(pos){return pos.x>=0&&pos.x<this.mapSize.x&&pos.y>=0&&pos.y<this.mapSize.y;}
     build(building){this.buildings[this.movingPos.x][this.movingPos.y] = new building(this.turn,this.getCurrentTeam().getColour(),[255,0,0])}
     //Normal functions
+    rotateCastleWonder(dir){
+      this.castleWonder.nextAvailableCorner(dir)
+    }
+
     undoMove(){
       let unit = this.units[this.movingPos.x][this.movingPos.y];
       this.units[this.movingPos.x][this.movingPos.y]=null;
@@ -95,9 +106,9 @@ class Game{
       this.moveCamToSelected(pos);
       selectedPos=pos;
       let unitMoved = false;
-      if(this.selected!=null){//Move unit if one is selected
+      if(this.selected!=null){//Move unit if one is selected 
         let unit = this.units[this.selected.x][this.selected.y]
-        let map = searcher.getMovementMap(this.selected,unit.getTeam(),unit.getMovement());
+        let map = searcher.getMovementMap(this.selected.copy(),unit.getTeam(),unit.getMovement());
         if(map[pos.x][pos.y]){//If valid move
           unitMoved = true;
           this.lastPos=this.selected.copy();//Saves last position
@@ -117,8 +128,8 @@ class Game{
         if(this.units[pos.x][pos.y]!=null){//If unit selected
           gotoTile(pos.x,pos.y);
           this.units[pos.x][pos.y].select();
-          this.selected = pos;
-          this.movementMap = searcher.getMovementMap(this.selected,this.units[pos.x][pos.y].getTeam(),this.units[pos.x][pos.y].getMovement());
+          this.selected = pos.copy();
+          this.movementMap = searcher.getMovementMap(this.selected.copy(),this.units[pos.x][pos.y].getTeam(),this.units[pos.x][pos.y].getMovement());
           this.buildMap = searcher.getBuildMap(this.movementMap,this.turn,this.terrain,this.buildings,this.resources)
           if(this.units[pos.x][pos.y].getTeam()!=this.turn||this.units[pos.x][pos.y].getLocked()==true){
             return false;//If selected enemy
@@ -202,6 +213,17 @@ class Game{
               rect(x*zoom,y*zoom,zoom,zoom)
             }
           }//movement map
+          if(this.castleWonder!=null){
+            let list = this.castleWonder.getCurrentCorner();
+            for(let i=0;i<list.length;i++){
+              let pos = list[i];
+              if(pos.x==x&&pos.y==y){
+                strokeWeight(0)
+                fill(255,255,0,180);
+                rect(x*zoom,y*zoom,zoom,zoom)
+              }
+            }
+          }
           if(this.selected!=null){
             if(this.buildMap!=null&&this.units[this.selected.x][this.selected.y] instanceof Villager){
               if(this.buildMap[x][y]==true){
@@ -364,7 +386,7 @@ class Game{
       return map;
     }
 
-    static getPossibleBuildings(pos,team,terrain,buildings,resources){//Add a way to grey out options if not enough resources
+    static getPossibleBuildings(pos,team,terrain,buildings,units,resources){//Add a way to grey out options if not enough resources
       if(buildings[pos.x][pos.y]!=null){return []}//Return if building already there
       if(resources[pos.x][pos.y]=="Wheat"){
         return ["Mill"];
@@ -378,10 +400,28 @@ class Game{
         options.push("Town Center");//Validation for this needs adding
       }
       if(types.includes("castles")){
-        options.push("Castle");
+        let result = searcher.getCastleWonders("castles",terrain,buildings,units,pos);
+        if(result.some(x=>x!=null)){
+          options.push("Castle");
+        }
       }
   
       return options;
+    }
+
+    static getCastleWonders(type,terrain,buildings,units,pos){
+      return [searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x,pos.y+1),createVector(pos.x+1,pos.y+1),createVector(pos.x+1,pos.y),pos),
+        searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x+1,pos.y),createVector(pos.x+1,pos.y-1),createVector(pos.x,pos.y-1),pos),
+        searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x,pos.y-1),createVector(pos.x-1,pos.y-1),createVector(pos.x-1,pos.y),pos),
+        searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x-1,pos.y),createVector(pos.x-1,pos.y+1),createVector(pos.x,pos.y+1),pos)]
+    }
+
+    static checkCastleWonder(type,terrain,buildings,units,a,b,c,pos){
+      if(buildings[a.x][a.y]!=null||buildings[b.x][b.y]!=null||buildings[c.x][c.y]!=null||units[a.x][a.y]!=null||units[b.x][b.y]!=null||units[c.x][c.y]!=null){return null}
+      if(terrain[a.x][a.y].getBuildings().includes(type) && terrain[b.x][b.y].getBuildings().includes(type) && terrain[c.x][c.y].getBuildings().includes(type)){
+        return [a,b,c,pos];
+      }
+      return null;
     }
 
     static getPossibleBuildingExtensions(pos,team,terrain,buildings){

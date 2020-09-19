@@ -12,6 +12,7 @@ let buildingImgs = ["TownCenterBlue","TownCenterRed","MillBlue","MillRed"];
 
 let currentMenu = null;
 let sidebar;
+
 function preload(){
   for(let i=0;i<unitImgs.length;i++){
     let unit = unitImgs[i];
@@ -91,25 +92,11 @@ function controls(){
         if(currentMenu==null){
           unitSelected = game.select(toGrid(mouseX,mouseY));
         }else{//In menu
-          currentMenu.click(mouseX,mouseY);
+          currentMenu.mouseClick(mouseX,mouseY);
         }
       }
-      
       mouseDown=true;
     }
-  
-  }
-  if(keyIsDown(87)){//w
-    //cam.y=cam.y-2;
-  }
-  if(keyIsDown(65)){//a
-    //cam.x=cam.x-2;
-  }
-  if(keyIsDown(83)){//s
-    //cam.y=cam.y+2;
-  }
-  if(keyIsDown(68)){//d
-    //cam.x=cam.x+2;
   }
 }
 
@@ -122,40 +109,37 @@ function selectedCamDist(){
 
 function keyPressed(){
   if(keyCode==32){//space
-    unitSelected = game.select(selectedPos);
+    if(currentMenu==null){unitSelected = game.select(selectedPos)}
+    else{currentMenu.clickOption(currentMenu.getSelectedIndex())}
   }
-  if(unitSelected==false){return;}
-
+ 
   if(keyCode==87&&selectedPos.y>0){//w
-    selectedPos.add(createVector(0,-1))
-    if(selectedCamDist()>viewArea){
-      offset.add(createVector(0,-1));
-      gotoTile(offset.x,offset.y);
-    }
+    if(currentMenu==null){moveTileSelected(createVector(0,-1))}
+    else{currentMenu.move(-1)}
   }
   if(keyCode==65&&selectedPos.x>0){//a
-    selectedPos.add(createVector(-1,0));
-    if(selectedCamDist()>viewArea){
-      offset.add(createVector(-1,0));
-      gotoTile(offset.x,offset.y);
-    }
+    if(game.getCastleWonder()!=null){game.rotateCastleWonder(-1)}
+    else if(currentMenu==null){moveTileSelected(createVector(-1,0))}
   }
   if(keyCode==83&&selectedPos.y<game.getMapSize().y-1){//s
-    selectedPos.add(createVector(0,1));
-    if(selectedCamDist()>viewArea){
-      offset.add(createVector(0,1));
-      gotoTile(offset.x,offset.y);
-    }
+    if(currentMenu==null){moveTileSelected(createVector(0,1))}
+    else{currentMenu.move(1)}
   }
   if(keyCode==68&&selectedPos.x<game.getMapSize().x-1){//d
-    selectedPos.add(createVector(1,0))
-    if(selectedCamDist()>viewArea){
-      offset.add(createVector(1,0));
-      gotoTile(offset.x,offset.y);
-    }
+    if(game.getCastleWonder()!=null){game.rotateCastleWonder(1)}
+    else if(currentMenu==null){moveTileSelected(createVector(1,0))}
   }
 
 }
+
+function moveTileSelected(vector){
+  selectedPos.add(vector);
+  if(selectedCamDist()>viewArea){
+    offset.add(vector);
+    gotoTile(offset.x,offset.y);
+  }
+}
+
 
 function keyReleased(){
   if(keyCode==32){
@@ -164,6 +148,10 @@ function keyReleased(){
       unitSelected=null;
     }
   }
+}
+
+function mouseMoved(){
+  if(currentMenu!=null){currentMenu.mouseOver(mouseX,mouseY)}
 }
 
 function mouseReleased(){
