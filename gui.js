@@ -1,7 +1,7 @@
 class miniMenu{
     constructor(options){
         this.pos = createVector(width/2,height/2);
-        this.width = 110;
+        this.width = 210;
         this.height = 20;
         this.innerBorder = 3;
         this.outerBorder = 10;
@@ -17,17 +17,29 @@ class miniMenu{
             "Stables":Stables,
             "ArcheryRange":ArcheryRange
         }
+        this.toFunc = {
+            "Build":function(){
+                currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat([["Cancel",function(){game.openUnitMenu()}]]))
+            },
+            "Done":function(){
+                game.lock();
+                currentMenu=null;
+            },
+            "Undo Move":function(){
+                game.undoMove();
+                currentMenu=null;
+            },
+            "Castle":function(){
+                game.setCastleWonder(new Castle(game.getTurn(),game.getCurrentTeam().getColour(),[255,0,0],searcher.getCastleWonders("castles",game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources(),game.getMovingPos())))
+                currentMenu=null}
+        }
     }
 
     getSelectedIndex(){
         return this.selectedIndex;
     }
 
-    move(dir){
-        this.selectedIndex += dir;
-        if(this.selectedIndex<0){this.selectedIndex=0};
-        if(this.selectedIndex>=this.options.length){this.selectedIndex=this.options.length-1};
-    }
+    move(dir){this.selectedIndex = (this.selectedIndex+dir+this.options.length)%this.options.length}
 
     mouseOver(x,y){
         if(this.onMenu(x,y)){
@@ -43,46 +55,61 @@ class miniMenu{
         if(this.onMenu(x,y)){//If clicked on menu
             this.clickOption(this.selectedIndex);
         }else{//Clicked off menu
-            if(this.options.includes("Undo Move")){//Complete unselect
+            /*if(this.options.includes("Undo Move")){//Complete unselect
                 game.undoMove();
                 currentMenu=null;
             }else{//Go back a menu
                 game.openUnitMenu();
             }
-            
+            */
         }
     }
 
     clickOption(i){
         let result = this.options[i];
+        if(!Array.isArray(result)){//If function not given find it
+            if(Object.keys(this.toText).includes(miniMenu.withoutPrice(result))){//If buildings picked
+                let building = this.toText[miniMenu.withoutPrice(result)]
+                if(game.getCurrentTeam().afford(building.getPrice())){
+                    game.getCurrentTeam().spend(building.getPrice());
+                    game.build(building);
+                    game.lock()
+                    currentMenu=null;
+                }
+            }else{
+                this.toFunc[result]();
+            }
+        }else{
+            result[1]();
+        }
+        /*
         switch(result){
-            case "Done":
-                game.lock();
-                currentMenu=null;
-                break;
-            case "Undo Move":
-                game.undoMove();
-                currentMenu=null;
-                break;
-            case "Build":
-                currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat("Cancel"));
-                break;
-            case "Cancel":
-                game.openUnitMenu();
-                break;
             case "Castle":
-                game.setCastleWonder(new Castle(game.getTurn(),game.getCurrentTeam().getColour(),[255,0,0],searcher.getCastleWonders("castles",game.getTerrain(),game.getBuildings(),game.getUnits(),game.getMovingPos())))
-                currentMenu=null;
+                
                 break;
             case "Wonder":
 
                 break;
         }
-        if(Object.keys(this.toText).includes(result)){
-            game.build(this.toText[result]);
-            game.lock()
-            currentMenu=null;
+        if(Object.keys(this.toText).includes(this.withoutPrice(result))){
+            let building = this.toText[this.withoutPrice(result)]
+            if(game.getCurrentTeam().afford(building.getPrice())){
+                game.getCurrentTeam().spend(building.getPrice());
+                game.build(building);
+                game.lock()
+                currentMenu=null;
+            }
         }
+        */
+    }
+
+    static withoutPrice(string){
+        for(let i=0;i<string.length;i++){//remove price
+            if(string[i]=="("){
+                return string.slice(0,i-1);
+            }
+        }
+        return string;
     }
 
     region(a,b,x,y,w,h){
@@ -106,8 +133,12 @@ class miniMenu{
             fill(222,184,135);
             rect(0,this.height*i,this.width,this.height);
             fill(0)
-            textSize(this.height);
-            text(this.options[i],0,this.height*(i+1));
+            textSize(0.9*this.height);
+            if(Array.isArray(this.options[i])){
+                text(this.options[i][0],0,-0.2*this.height+this.height*(i+1));
+            }else{
+                text(this.options[i],0,-0.2*this.height+this.height*(i+1));
+            }
             if(i==this.selectedIndex){
                 fill(0,100);
                 rect(0,this.height*i,this.width,this.height);

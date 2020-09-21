@@ -53,10 +53,11 @@ function draw(){
   scale(2,1)
   translate(-cam.x-tile.x/2+width/4,-cam.y-tile.y+height/2-3*zoom/4)
   rotate(radians(45))
-  game.draw(width,height);
+  game.show(width,height);
   pop();
   ellipseMode(CENTER);
   ellipse(width/2,height/2,5,5)
+  game.showResources();
   sidebar.show();
   if(currentMenu!=null){
     currentMenu.show();
@@ -118,7 +119,7 @@ function keyPressed(){
     else{currentMenu.move(-1)}
   }
   if(keyCode==65&&selectedPos.x>0){//a
-    if(game.getCastleWonder()!=null){game.rotateCastleWonder(-1)}
+    if(game.getCastleWonder()!=null){game.rotateCastleWonder(1)}
     else if(currentMenu==null){moveTileSelected(createVector(-1,0))}
   }
   if(keyCode==83&&selectedPos.y<game.getMapSize().y-1){//s
@@ -126,7 +127,7 @@ function keyPressed(){
     else{currentMenu.move(1)}
   }
   if(keyCode==68&&selectedPos.x<game.getMapSize().x-1){//d
-    if(game.getCastleWonder()!=null){game.rotateCastleWonder(1)}
+    if(game.getCastleWonder()!=null){game.rotateCastleWonder(-1)}
     else if(currentMenu==null){moveTileSelected(createVector(1,0))}
   }
 

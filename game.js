@@ -94,12 +94,16 @@ class Game{
     }
 
     select(pos){
-      if(pos.x<0||pos.x>=this.mapSize.x||pos.y<0||pos.y>=this.mapSize.y){//Deselect if clicked off the map
+      if(!this.onMap(pos)){//Deselect if clicked off the map
         if(this.selected!=null){
           this.units[this.selected.x][this.selected.y].deselect();
           this.movementMap=null;
           this.buildMap=null;
           this.selected=null;
+        }
+        if(this.castleWonder!=null){
+          currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat("Cancel"));
+          this.castleWonder=null;
         }
         return true;
       }
@@ -125,18 +129,63 @@ class Game{
       }
   
       if(unitMoved==false){//To select new square
-        if(this.units[pos.x][pos.y]!=null){//If unit selected
-          gotoTile(pos.x,pos.y);
-          this.units[pos.x][pos.y].select();
-          this.selected = pos.copy();
-          this.movementMap = searcher.getMovementMap(this.selected.copy(),this.units[pos.x][pos.y].getTeam(),this.units[pos.x][pos.y].getMovement());
-          this.buildMap = searcher.getBuildMap(this.movementMap,this.turn,this.terrain,this.buildings,this.resources)
+        if(this.castleWonder!=null){//If castle/wonder being built
+          if(this.castleWonder.onCorner(pos)){//If clicked on castle
+            this.castleWonder.settle();
+            let poses = this.castleWonder.getCurrentCorner();
+            for(let i=0;i<poses.length;i++){
+              let pos = poses[i];
+              this.buildings[pos.x][pos.y]=this.castleWonder;
+            }
+          }else{
+            currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat("Cancel"))}
+          this.castleWonder=null;
+          return true;
+        }
+        if(this.buildings[pos.x][pos.y]!=null&&this.units[pos.x][pos.y]!=null){//If unit on building
+          if(this.buildings[pos.x][pos.y].isClickable()&&this.units[pos.x][pos.y].getLocked()==false){//If both clickable
+            currentMenu=new miniMenu([[this.buildings[pos.x][pos.y].getName(),function(){game.selectBuilding(true)}]
+            ,[this.units[pos.x][pos.y].getName(),function(){game.selectUnit()}]
+            ,["Cancel",function(){currentMenu=null}]])
+          }else if(this.buildings[pos.x][pos.y].isClickable()){//Just building clickable
+            this.selectBuilding(true);
+          }else if(this.units[pos.x][pos.y].getLocked()==false){//Just unit clickable
+            this.selectUnit();
+          }else{//Neither clickable
+            this.selectUnit();
+            return false;  
+          }
+          return true;
+        }
+        else if(this.buildings[pos.x][pos.y]!=null){
+          this.selectBuilding();
+        }
+        else if(this.units[pos.x][pos.y]!=null){//If unit selected
+          this.selectUnit()
           if(this.units[pos.x][pos.y].getTeam()!=this.turn||this.units[pos.x][pos.y].getLocked()==true){
             return false;//If selected enemy
           }
         }
       }
       return true;
+    }
+
+    selectBuilding(remove=false){
+      gotoTile(selectedPos.x,selectedPos.y);
+      if(remove){
+        currentMenu=new miniMenu(this.buildings[selectedPos.x][selectedPos.y].getOptions());
+      }else{
+        currentMenu=new miniMenu([["train"]].concat(this.buildings[selectedPos.x][selectedPos.y].getOptions()));
+      }
+    }
+
+    selectUnit(){
+      gotoTile(selectedPos.x,selectedPos.y);
+      currentMenu=null;
+      this.units[selectedPos.x][selectedPos.y].select();
+      this.selected = selectedPos.copy();
+      this.movementMap = searcher.getMovementMap(this.selected.copy(),this.units[selectedPos.x][selectedPos.y].getTeam(),this.units[selectedPos.x][selectedPos.y].getMovement());
+      this.buildMap = searcher.getBuildMap(this.movementMap,this.turn,this.terrain,this.buildings,this.resources)  
     }
 
     moveCamToSelected(pos){
@@ -170,28 +219,29 @@ class Game{
       return options.concat(["Undo Move","Done"])
     }
   
-
-  
     endDay(){
-      this.teams[this.turn].unlockAll();
+      let team = this.getCurrentTeam();
+      team.unlockAll();
       //unlock everything
-      this.turn=(this.turn+1)%this.teams.length;
+      
       //Finish all buildings and units training
       for(let y=0;y<this.mapSize.y;y++){
         for(let x=0;x<this.mapSize.x;x++){
           let current = this.buildings[x][y];
-          if(current!=null){
-            if(current.getTeam()==this.turn){
+          if(current!=null){//If building
+            if(current.getTeam()==this.turn){//If building on team
               this.buildings[x][y].finish();
+              team.give(this.buildings[x][y].getIncome());
             }
           }
         }
       }
+      this.turn=(this.turn+1)%this.teams.length;
       let pos = sidebar.getNextUnit();
       gotoTile(pos.x,pos.y);
     }
   
-    draw(width,height){
+    show(width,height){
       for(let y=0;y<this.mapSize.y;y++){
         for(let x=0;x<this.mapSize.x;x++){
           this.terrain[x][y].show(x,y,zoom);
@@ -264,8 +314,13 @@ class Game{
   
         }
       }
+      
     }
   
+    showResources(){
+      this.getCurrentTeam().showResources();
+    }
+
   }
   
   class preMade extends Game{
@@ -320,141 +375,6 @@ class Game{
       let one = new Team([new Villager(createVector(2,length-3),0,"Blue"),new Milita(createVector(2,length-2),0,"Blue")],[],"Blue");
       let two = new Team([new Villager(createVector(length-2,2),1,"Red"),new Milita(createVector(length-2,3),1,"Red")],[],"Red");
       return [one,two];
-    }
-
-  }
-
-  //Gets movement maps, gets build map, search areas
-  class searcher{
-    static getMovementMap(pos,team,movesLeft){
-      let terrain = game.getTerrain();
-      let map = clone(game.getTerrain());
-      map[pos.x][pos.y]=true;
-      searcher.threeDirection(map,terrain,pos,createVector(1,0),team,movesLeft);
-      searcher.threeDirection(map,terrain,pos,createVector(-1,0),team,movesLeft);
-      for(let y=0;y<map.length;y++){
-        for(let x=0;x<map[0].length;x++){
-          if(map[x][y]!=true){
-            map[x][y] = null;
-          }else if(!(pos.x==x&pos.y==y)&&game.getUnits()[x][y]!=null){//If other friendly unit
-            map[x][y] = false;//Stop player moving onto friendly unit
-          }
-        }
-      }
-      return map;
-    }
-    static threeDirection(map,terrain,pos,dir,team,movesLeft){
-      let forward = p5.Vector.add(pos,dir);
-      searcher.validMovement(map,terrain,forward,dir,team,movesLeft);
-      let right = p5.Vector.add(pos,dir.copy().rotate(radians(90)));
-      searcher.validMovement(map,terrain,right,dir,team,movesLeft);
-      let left = p5.Vector.add(pos,terrain,dir.copy().rotate(radians(-90)));
-      searcher.validMovement(map,terrain,left,dir,team,movesLeft);
-    }
-    static validMovement(map,terrain,pos,dir,team,movesLeft){
-      pos.x=round(pos.x);
-      pos.y=round(pos.y);
-      if(game.onMap(pos)){
-        let currentTerrain = terrain[pos.x][pos.y];
-        let movement = currentTerrain.getMovement();
-        if(movement==0){return};//If water
-        if(game.getUnits()[pos.x][pos.y]!=null){//If unit
-          if(game.getUnits()[pos.x][pos.y].getTeam()!=team){return}//If unit not on team
-        }
-        if(game.getBuildings()[pos.x][pos.y]!=null){//If building
-          if(game.getBuildings()[pos.x][pos.y].getTeam()!=team){return}//If not on team
-        }
-        if(movesLeft-movement>=0){//If first position is valid <= add unit/building blocking
-          map[pos.x][pos.y]=true;
-          searcher.threeDirection(map,terrain,pos,dir,team,movesLeft-movement);
-        }
-      }
-    }
-
-    static getBuildMap(movementMap,team,terrain,buildings,resources){
-      let map = clone(movementMap);
-      for(let y=0;y<map.length;y++){
-        for(let x=0;x<map[0].length;x++){
-          let c = map[x][y]
-          if(c!=null){
-            if(searcher.getPossibleBuildingExtensions(createVector(x,y),team,terrain,buildings).length==0 || buildings[x][y]!=null || resources[x][y]!=null){
-              map[x][y]=null;
-            }
-          }
-        }
-      }
-      return map;
-    }
-
-    static getPossibleBuildings(pos,team,terrain,buildings,units,resources){//Add a way to grey out options if not enough resources
-      if(buildings[pos.x][pos.y]!=null){return []}//Return if building already there
-      if(resources[pos.x][pos.y]=="Wheat"){
-        return ["Mill"];
-      }
-      if(resources[pos.x][pos.y]=="Gold"){
-        return ["Mine"];
-      }
-      let options = searcher.getPossibleBuildingExtensions(pos,team,terrain,buildings);
-      let types = terrain[pos.x][pos.y].getBuildings()
-      if(types.includes("towns")){
-        options.push("Town Center");//Validation for this needs adding
-      }
-      if(types.includes("castles")){
-        let result = searcher.getCastleWonders("castles",terrain,buildings,units,pos);
-        if(result.some(x=>x!=null)){
-          options.push("Castle");
-        }
-      }
-  
-      return options;
-    }
-
-    static getCastleWonders(type,terrain,buildings,units,pos){
-      return [searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x,pos.y+1),createVector(pos.x+1,pos.y+1),createVector(pos.x+1,pos.y),pos),
-        searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x+1,pos.y),createVector(pos.x+1,pos.y-1),createVector(pos.x,pos.y-1),pos),
-        searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x,pos.y-1),createVector(pos.x-1,pos.y-1),createVector(pos.x-1,pos.y),pos),
-        searcher.checkCastleWonder(type,terrain,buildings,units,createVector(pos.x-1,pos.y),createVector(pos.x-1,pos.y+1),createVector(pos.x,pos.y+1),pos)]
-    }
-
-    static checkCastleWonder(type,terrain,buildings,units,a,b,c,pos){
-      if(buildings[a.x][a.y]!=null||buildings[b.x][b.y]!=null||buildings[c.x][c.y]!=null||units[a.x][a.y]!=null||units[b.x][b.y]!=null||units[c.x][c.y]!=null){return null}
-      if(terrain[a.x][a.y].getBuildings().includes(type) && terrain[b.x][b.y].getBuildings().includes(type) && terrain[c.x][c.y].getBuildings().includes(type)){
-        return [a,b,c,pos];
-      }
-      return null;
-    }
-
-    static getPossibleBuildingExtensions(pos,team,terrain,buildings){
-      let options = [];
-      let types = terrain[pos.x][pos.y].getBuildings();
-      if(types.includes("farm")){
-        if(searcher.nearBuilding(pos,team,Mill,buildings)){
-          options.push("Farm");
-        }
-      }
-      if(types.includes("towns")){
-        if(searcher.nearBuilding(pos,team,TownCenter,buildings)){
-          options.push("Barracks");
-          options.push("Stables");
-        }
-      }
-      return options;
-    }
-
-    static nearBuilding(pos,team,building,buildings){
-      return searcher.isBuilding(p5.Vector.add(pos,createVector(1,0)),team,building,buildings) ||
-      searcher.isBuilding(p5.Vector.add(pos,createVector(-1,0)),team,building,buildings) ||
-      searcher.isBuilding(p5.Vector.add(pos,createVector(0,1)),team,building,buildings) ||
-      searcher.isBuilding(p5.Vector.add(pos,createVector(0,-1)),team,building,buildings);
-    }
-  
-    static isBuilding(pos,team,building,buildings){
-      if(!game.onMap(pos)){return false}
-      let current = buildings[pos.x][pos.y]
-      if(current==null){return false}
-      if(current.getTeam()!=team){return false}
-      if(!(current instanceof building)){return false}
-      return true;
     }
 
   }

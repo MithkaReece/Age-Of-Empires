@@ -71,12 +71,16 @@ class Infantry extends Unit{
     constructor(pos,team,colour){
       super("Villager",pos,team,colour)
     }
+    static getName(){return "Villager"}
+    getName(){return Villager.getName()}
   }
   
   class Milita extends Infantry{
     constructor(pos,team,colour){
       super("Villager",pos,team,colour)
     }
+    static getName(){return "Milita"}
+    getName(){return Milita.getName()}
   }
   class Cavalry{
   
