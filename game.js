@@ -77,10 +77,17 @@ class Game{
     }
     //One line functions
     openUnitMenu(){currentMenu = new miniMenu(this.getOptions(this.movingPos))}
-    lock(){this.units[this.movingPos.x][this.movingPos.y].lock()}
+    lockCurrent(){this.lock(this.movingPos)}
+    lock(pos){this.units[pos.x][pos.y].lock()}
     deselect(){this.select(createVector(-1,-1))}
     onMap(pos){return pos.x>=0&&pos.x<this.mapSize.x&&pos.y>=0&&pos.y<this.mapSize.y;}
     build(building){this.buildings[this.movingPos.x][this.movingPos.y] = new building(this.turn,this.getCurrentTeam().getColour(),[255,0,0])}
+    train(unit){
+      let newUnit = new unit(selectedPos.copy(),this.turn,this.getCurrentTeam().getColour(),50);
+      this.units[selectedPos.x][selectedPos.y] = newUnit
+      this.lock(selectedPos);
+      this.getCurrentTeam().addUnit(newUnit);
+    };
     //Normal functions
     rotateCastleWonder(dir){
       this.castleWonder.nextAvailableCorner(dir)
@@ -90,10 +97,30 @@ class Game{
       let unit = this.units[this.movingPos.x][this.movingPos.y];
       this.units[this.movingPos.x][this.movingPos.y]=null;
       this.units[this.lastPos.x][this.lastPos.y] = unit;
+      unit.setPos(this.lastPos.copy())
       this.select(this.lastPos);
     }
 
     select(pos){
+      if(this.handleOffscreenSelect(pos)){return true}
+      this.moveCamToSelected(pos);//Needs better placement
+      selectedPos=pos;
+      if(this.handleUnitMoving(pos)){return true};
+      if(this.handleCastleWonderBuilding(pos)){return true}
+      if(this.buildings[pos.x][pos.y]!=null&&this.units[pos.x][pos.y]!=null){//If unit on building
+        return this.handleUnitOnBuilding(pos);
+      }else if(this.buildings[pos.x][pos.y]!=null){//If building selected
+        this.selectBuilding();
+      }else if(this.units[pos.x][pos.y]!=null){//If unit selected
+        this.selectUnit()
+        if(this.units[pos.x][pos.y].getTeam()!=this.turn||this.units[pos.x][pos.y].getLocked()==true){
+          return false;//If selected enemy
+        }
+      }
+      return true;
+    }
+
+    handleOffscreenSelect(pos){
       if(!this.onMap(pos)){//Deselect if clicked off the map
         if(this.selected!=null){
           this.units[this.selected.x][this.selected.y].deselect();
@@ -107,10 +134,12 @@ class Game{
         }
         return true;
       }
-      this.moveCamToSelected(pos);
-      selectedPos=pos;
-      let unitMoved = false;
+      return false;
+    }
+
+    handleUnitMoving(pos){
       if(this.selected!=null){//Move unit if one is selected 
+        let unitMoved = false;
         let unit = this.units[this.selected.x][this.selected.y]
         let map = searcher.getMovementMap(this.selected.copy(),unit.getTeam(),unit.getMovement());
         if(map[pos.x][pos.y]){//If valid move
@@ -126,56 +155,57 @@ class Game{
         this.movementMap=null;
         this.buildmap=null;
         this.selected=null;
+        if(unitMoved){return true}
       }
-  
-      if(unitMoved==false){//To select new square
-        if(this.castleWonder!=null){//If castle/wonder being built
-          if(this.castleWonder.onCorner(pos)){//If clicked on castle
-            this.castleWonder.settle();
-            let poses = this.castleWonder.getCurrentCorner();
-            for(let i=0;i<poses.length;i++){
-              let pos = poses[i];
-              this.buildings[pos.x][pos.y]=this.castleWonder;
-            }
-          }else{
-            currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat("Cancel"))}
-          this.castleWonder=null;
-          return true;
-        }
-        if(this.buildings[pos.x][pos.y]!=null&&this.units[pos.x][pos.y]!=null){//If unit on building
-          if(this.buildings[pos.x][pos.y].isClickable()&&this.units[pos.x][pos.y].getLocked()==false){//If both clickable
-            currentMenu=new miniMenu([[this.buildings[pos.x][pos.y].getName(),function(){game.selectBuilding(true)}]
-            ,[this.units[pos.x][pos.y].getName(),function(){game.selectUnit()}]
-            ,["Cancel",function(){currentMenu=null}]])
-          }else if(this.buildings[pos.x][pos.y].isClickable()){//Just building clickable
-            this.selectBuilding(true);
-          }else if(this.units[pos.x][pos.y].getLocked()==false){//Just unit clickable
-            this.selectUnit();
-          }else{//Neither clickable
-            this.selectUnit();
-            return false;  
+      return false;
+    }
+
+    handleCastleWonderBuilding(pos){
+      if(this.castleWonder!=null){//If castle/wonder being built
+        if(this.castleWonder.onCorner(pos)){//If clicked on castle
+          this.castleWonder.settle();//Settle position of castle
+          this.lockCurrent()//Lock villager
+          this.getCurrentTeam().spend(this.castleWonder.getPrice());//Spend resources
+          let poses = this.castleWonder.getCurrentCorner();
+          for(let i=0;i<poses.length;i++){
+            let pos = poses[i];
+            this.buildings[pos.x][pos.y]=this.castleWonder;
           }
-          return true;
+        }else{
+          currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat([["Cancel",function(){game.openUnitMenu()}]]))
         }
-        else if(this.buildings[pos.x][pos.y]!=null){
-          this.selectBuilding();
-        }
-        else if(this.units[pos.x][pos.y]!=null){//If unit selected
-          this.selectUnit()
-          if(this.units[pos.x][pos.y].getTeam()!=this.turn||this.units[pos.x][pos.y].getLocked()==true){
-            return false;//If selected enemy
-          }
-        }
+        this.castleWonder=null;
+        return true;
+      }
+      return false;
+    }
+
+    handleUnitOnBuilding(pos){
+      if(this.buildings[pos.x][pos.y].isClickable()&&this.units[pos.x][pos.y].getLocked()==false){//If both clickable
+        currentMenu=new miniMenu([[this.buildings[pos.x][pos.y].getName(),function(){game.selectBuilding(true)}]
+        ,[this.units[pos.x][pos.y].getName(),function(){game.selectUnit()}]
+        ,["Cancel",function(){currentMenu=null}]])
+      }else if(this.buildings[pos.x][pos.y].isClickable()){//Just building clickable
+        this.selectBuilding(true);
+      }else if(this.units[pos.x][pos.y].getLocked()==false){//Just unit clickable
+        this.selectUnit();
+      }else{//Neither clickable
+        this.selectUnit();
+        return false;  
       }
       return true;
     }
 
     selectBuilding(remove=false){
-      gotoTile(selectedPos.x,selectedPos.y);
-      if(remove){
-        currentMenu=new miniMenu(this.buildings[selectedPos.x][selectedPos.y].getOptions());
-      }else{
-        currentMenu=new miniMenu([["train"]].concat(this.buildings[selectedPos.x][selectedPos.y].getOptions()));
+      if(this.buildings[selectedPos.x][selectedPos.y].isClickable()){
+        gotoTile(selectedPos.x,selectedPos.y);
+        if(remove){
+          currentMenu=new miniMenu(this.buildings[selectedPos.x][selectedPos.y].getOptions());
+        }else{
+          currentMenu=new miniMenu([["Train",function(){
+            currentMenu=new miniMenu(game.getBuildings()[selectedPos.x][selectedPos.y].getTrainingList().concat([["Cancel",function(){currentMenu=null}]]));
+          }]].concat(this.buildings[selectedPos.x][selectedPos.y].getOptions()));
+        }
       }
     }
 
@@ -227,11 +257,17 @@ class Game{
       //Finish all buildings and units training
       for(let y=0;y<this.mapSize.y;y++){
         for(let x=0;x<this.mapSize.x;x++){
-          let current = this.buildings[x][y];
-          if(current!=null){//If building
-            if(current.getTeam()==this.turn){//If building on team
+          let building = this.buildings[x][y];
+          if(building!=null){//If building
+            if(building.getTeam()==this.turn){//If building on team
               this.buildings[x][y].finish();
               team.give(this.buildings[x][y].getIncome());
+            }
+          }
+          let unit = this.units[x][y];
+          if(unit!=null){//If unit
+            if(unit.getTeam()==this.turn){//If unit on team
+              this.units[x][y].train();
             }
           }
         }
@@ -372,8 +408,8 @@ class Game{
     }
 
     static plainTeams(length,height){
-      let one = new Team([new Villager(createVector(2,length-3),0,"Blue"),new Milita(createVector(2,length-2),0,"Blue")],[],"Blue");
-      let two = new Team([new Villager(createVector(length-2,2),1,"Red"),new Milita(createVector(length-2,3),1,"Red")],[],"Red");
+      let one = new Team([new Villager(createVector(2,length-3),0,"Blue",100),new Milita(createVector(2,length-2),0,"Blue")],[],"Blue",100);
+      let two = new Team([new Villager(createVector(length-2,2),1,"Red",100),new Milita(createVector(length-2,3),1,"Red")],[],"Red",100);
       return [one,two];
     }
 

@@ -8,21 +8,24 @@ class miniMenu{
         this.options = options;
         this.selectedIndex = 0;
         this.previousOptions=null;
-        this.toText = {
+        this.toBuilding = {
             "Town Center":TownCenter,
             "Mill":Mill,
             "Farm":Farm,
             "Mine":Mine,
             "Barracks":Barracks,
             "Stables":Stables,
-            "ArcheryRange":ArcheryRange
+            "ArcheryRange":ArcheryRange,
+        }
+        this.toUnit = {
+            "Villager":Villager
         }
         this.toFunc = {
             "Build":function(){
                 currentMenu=new miniMenu(searcher.getPossibleBuildings(game.getMovingPos(),game.getTurn(),game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources()).concat([["Cancel",function(){game.openUnitMenu()}]]))
             },
             "Done":function(){
-                game.lock();
+                game.lockCurrent();
                 currentMenu=null;
             },
             "Undo Move":function(){
@@ -30,7 +33,8 @@ class miniMenu{
                 currentMenu=null;
             },
             "Castle":function(){
-                game.setCastleWonder(new Castle(game.getTurn(),game.getCurrentTeam().getColour(),[255,0,0],searcher.getCastleWonders("castles",game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources(),game.getMovingPos())))
+                game.setCastleWonder(new Castle(game.getTurn(),game.getCurrentTeam().getColour(),[255,0,0]
+                ,searcher.getCastleWonders("castles",game.getTerrain(),game.getBuildings(),game.getUnits(),game.getResources(),game.getMovingPos())))
                 currentMenu=null}
         }
     }
@@ -68,39 +72,27 @@ class miniMenu{
     clickOption(i){
         let result = this.options[i];
         if(!Array.isArray(result)){//If function not given find it
-            if(Object.keys(this.toText).includes(miniMenu.withoutPrice(result))){//If buildings picked
-                let building = this.toText[miniMenu.withoutPrice(result)]
+            if(Object.keys(this.toBuilding).includes(miniMenu.withoutPrice(result))){//If buildings picked
+                let building = this.toBuilding[miniMenu.withoutPrice(result)]
                 if(game.getCurrentTeam().afford(building.getPrice())){
                     game.getCurrentTeam().spend(building.getPrice());
                     game.build(building);
-                    game.lock()
+                    game.lockCurrent()
                     currentMenu=null;
                 }
-            }else{
-                this.toFunc[result]();
+            }else if(Object.keys(this.toUnit).includes(miniMenu.withoutPrice(result))){//If buildings picked
+                let unit = this.toUnit[miniMenu.withoutPrice(result)]
+                if(game.getCurrentTeam().afford(unit.getPrice())){
+                    game.getCurrentTeam().spend(unit.getPrice());
+                    game.train(unit);
+                    currentMenu=null;
+                }
+            }else{//Standard functions
+                this.toFunc[miniMenu.withoutPrice(result)]();
             }
         }else{
             result[1]();
         }
-        /*
-        switch(result){
-            case "Castle":
-                
-                break;
-            case "Wonder":
-
-                break;
-        }
-        if(Object.keys(this.toText).includes(this.withoutPrice(result))){
-            let building = this.toText[this.withoutPrice(result)]
-            if(game.getCurrentTeam().afford(building.getPrice())){
-                game.getCurrentTeam().spend(building.getPrice());
-                game.build(building);
-                game.lock()
-                currentMenu=null;
-            }
-        }
-        */
     }
 
     static withoutPrice(string){

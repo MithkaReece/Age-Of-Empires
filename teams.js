@@ -23,6 +23,10 @@ class Team{
         }
     }
 
+    addUnit(unit){
+        this.units.push(unit);
+    }
+
     afford(price){return this.f>=price[0]&&this.g>=price[1]};
     spend(price){
         this.f-=price[0];

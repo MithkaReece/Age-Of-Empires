@@ -10,7 +10,10 @@ class Building{
 
     getTeam(){return this.team}
 
-    getIncome(){return this.income}
+    getIncome(){
+        if(this.income==null){return [0,0]}
+        return this.income
+    }
 
     getBuilt(){return this.built}
 
@@ -65,6 +68,10 @@ class TownCenter extends Building{
     getOptions(){
         return [["Cancel",function(){currentMenu=null}]];
     }
+
+    getTrainingList(){
+        return ["Villager"]
+    }
     
 }
 
@@ -107,12 +114,99 @@ class ArcheryRange extends Building{
     static getFullName(){return ArcheryRange.getName() + " (" + ArcheryRange.getPrice()[0] + "f " + ArcheryRange.getPrice()[1] + "g)"}
     static getName(){return "ArcheryRange"}
     getName(){return ArcheryRange.getName()}
-    static getPrice(){return [360,240]}//unknownm
+    static getPrice(){return [360,240]}
 
     getOptions(){
         return [["Cancel",function(){currentMenu=null}]];
     }
 }
+
+
+class Blacksmith extends Building{
+    constructor(team,colour,img){
+        super(team,img,[0,0],false);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+    }
+    static getFullName(){return Blacksmith.getName() + " (" + Blacksmith.getPrice()[0] + "f " + Blacksmith.getPrice()[1] + "g)"}
+    static getName(){return "Blacksmith"}
+    getName(){return Blacksmith.getName()}
+    static getPrice(){return [360,240]}
+
+    getOptions(){
+        return [["Cancel",function(){currentMenu=null}]];
+    }
+}
+
+
+class Market extends Building{
+    constructor(team,colour,img){
+        super(team,img,[0,0],true);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+    }
+    static getFullName(){return Market.getName() + " (" + Market.getPrice()[0] + "f " + Market.getPrice()[1] + "g)"}
+    static getName(){return "Market"}
+    getName(){return Market.getName()}
+    static getPrice(){return [360,240]}
+
+    getOptions(){
+        return [["Cancel",function(){currentMenu=null}]];
+    }
+}
+
+class Tower extends Building{
+    constructor(team,colour,img){
+        super(team,img,[0,0],false);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+    }
+    static getFullName(){return Tower.getName() + " (" + Tower.getPrice()[0] + "f " + Tower.getPrice()[1] + "g)"}
+    static getName(){return "Tower"}
+    getName(){return Tower.getName()}
+    static getPrice(){return [225,150]}
+
+}
+
+class Church extends Building{
+    constructor(team,colour,img){
+        super(team,img,[0,0],true);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+    }
+    static getFullName(){return Church.getName() + " (" + Church.getPrice()[0] + "f " + Church.getPrice()[1] + "g)"}
+    static getName(){return "Church"}
+    getName(){return Church.getName()}
+    static getPrice(){return [450,300]}
+
+    getOptions(){
+        return [["Cancel",function(){currentMenu=null}]];
+    }
+}
+
+class SiegeWorkshop extends Building{
+    constructor(team,colour,img){
+        super(team,img,[0,0],true);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+    }
+    static getFullName(){return SiegeWorkshop.getName() + " (" + SiegeWorkshop.getPrice()[0] + "f " + SiegeWorkshop.getPrice()[1] + "g)"}
+    static getName(){return "Siege Workshop"}
+    getName(){return SiegeWorkshop.getName()}
+    static getPrice(){return [450,300]}
+
+    getOptions(){
+        return [["Cancel",function(){currentMenu=null}]];
+    }
+}
+
+class University extends Building{
+    constructor(team,colour,img){
+        super(team,img,[0,0],false);
+        this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
+    }
+    static getFullName(){return University.getName() + " (" + University.getPrice()[0] + "f " + University.getPrice()[1] + "g)"}
+    static getName(){return "University"}
+    getName(){return University.getName()}
+    static getPrice(){return [450,300]}
+
+}
+
 
 class Mill extends Building{
     constructor(team,colour,img){
@@ -138,7 +232,7 @@ class Farm extends Building{
 
 class Mine extends Building{
     constructor(team,colour,img){
-        super(team,img,[0,160]);
+        super(team,img,[0,160],false);
         this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
     }
     static getFullName(){return Mine.getName() + " (" + Mine.getPrice()[0] + "f " + Mine.getPrice()[1] + "g)"}
@@ -150,7 +244,7 @@ class Mine extends Building{
 
 class Castle extends Building{
     constructor(team,colour,img,locations){
-        super(team,img);
+        super(team,img,[0,0],true);
         this.img = buildingImgs.filter(x=>x[0]=="TownCenterBlue")[0][1];
         this.locations = locations;
         this.cornerIndex = 0;
@@ -161,6 +255,7 @@ class Castle extends Building{
     static getName(){return "Castle"}
     getName(){return Castle.getName()}
     static getPrice(){return [840,560]}
+    getPrice(){return Castle.getPrice()}
 
     getCurrentCorner(){
         return this.locations[this.cornerIndex];
