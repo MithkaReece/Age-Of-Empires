@@ -28,10 +28,11 @@ class Unit{
     }
 
     train(){
-        if(this.trained = false){
-            this.trained = true;
-            this.health+=50;
-        }
+        if(this.trained)
+            return;
+
+        this.trained = true;
+        this.health+=50;
     }
 
     select(){
@@ -40,7 +41,7 @@ class Unit{
     deselect(){
         this.selected = false;
     }
-    show(x,y){
+    show(x,y, zoom){
         if(this.selected){
             strokeWeight(0)
             fill(255,255,0,180);
@@ -66,8 +67,6 @@ class Infantry extends Unit{
         this.movement = 7;
         this.range = 1;
     }
-
-
   }
   
   class Villager extends Infantry{

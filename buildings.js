@@ -35,7 +35,7 @@ class Building{
     }
 
     
-    show(x,y){
+    show(x,y, zoom){
         push();
         noSmooth()
         imageMode(CENTER)

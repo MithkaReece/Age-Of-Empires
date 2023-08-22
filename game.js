@@ -78,10 +78,15 @@ class Game{
     //One line functions
     openUnitMenu(){currentMenu = new miniMenu(this.getOptions(this.movingPos))}
     lockCurrent(){this.lock(this.movingPos)}
+
     lock(pos){this.units[pos.x][pos.y].lock()}
+
     deselect(){this.select(createVector(-1,-1))}
+
     onMap(pos){return pos.x>=0&&pos.x<this.mapSize.x&&pos.y>=0&&pos.y<this.mapSize.y;}
+
     build(building){this.buildings[this.movingPos.x][this.movingPos.y] = new building(this.turn,this.getCurrentTeam().getColour(),[255,0,0])}
+    
     train(unit){
       let newUnit = new unit(selectedPos.copy(),this.turn,this.getCurrentTeam().getColour(),50);
       this.units[selectedPos.x][selectedPos.y] = newUnit
@@ -277,7 +282,7 @@ class Game{
       gotoTile(pos.x,pos.y);
     }
   
-    show(width,height){
+    show(zoom){
       for(let y=0;y<this.mapSize.y;y++){
         for(let x=0;x<this.mapSize.x;x++){
           this.terrain[x][y].show(x,y,zoom);
@@ -342,10 +347,10 @@ class Game{
   
           
           if(this.buildings[x][y]!=null){
-            this.buildings[x][y].show(x,y);
+            this.buildings[x][y].show(x,y, zoom);
           }
           if(this.units[x][y]!=null){
-            this.units[x][y].show(x,y);
+            this.units[x][y].show(x,y, zoom);
           }
   
         }
